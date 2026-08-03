@@ -1,9 +1,14 @@
 const form = document.getElementById("chat-form");
 const input = document.getElementById("user-input");
 const chatBox = document.getElementById("chat-box");
+const resetButton = document.getElementById("reset-chat");
+const sessionStorageKey = "travel-chat-session-id";
 
 // Menyimpan seluruh riwayat percakapan
 let conversationHistory = [];
+let sessionId = sessionStorage.getItem(sessionStorageKey) || null;
+
+chatBox.setAttribute("aria-live", "polite");
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -33,7 +38,8 @@ form.addEventListener("submit", async (e) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messages: conversationHistory,
+        message: userMessage,
+        sessionId,
       }),
     });
 
@@ -46,6 +52,11 @@ form.addEventListener("submit", async (e) => {
     if (data.reply) {
       thinkingElement.textContent = data.reply;
 
+      if (data.sessionId) {
+        sessionId = data.sessionId;
+        sessionStorage.setItem(sessionStorageKey, sessionId);
+      }
+
       // Simpan jawaban AI agar context tetap ada
       conversationHistory.push({
         role: "model",
@@ -54,12 +65,18 @@ form.addEventListener("submit", async (e) => {
     } else {
       thinkingElement.textContent = "No response.";
     }
-
   } catch (err) {
     console.error(err);
-    thinkingElement.textContent =
-      "Failed to connect to server.";
+    thinkingElement.textContent = "Failed to connect to server.";
   }
+});
+
+resetButton?.addEventListener("click", () => {
+  conversationHistory = [];
+  sessionId = null;
+  sessionStorage.removeItem(sessionStorageKey);
+  chatBox.innerHTML = "";
+  input.focus();
 });
 
 function appendMessage(sender, text) {
